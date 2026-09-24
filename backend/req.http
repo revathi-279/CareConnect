@@ -1,0 +1,286 @@
+### CareConnect API Test Suite
+@baseUrl = http://localhost:5000/api
+@contentType = application/json
+
+# -------------------------------------------------------------
+# 0. SERVER HEALTH CHECK
+# -------------------------------------------------------------
+
+### Health Check Root
+GET http://localhost:5000/
+Accept: application/json
+
+###
+
+# -------------------------------------------------------------
+# 1. SERVICES CATALOG (PUBLIC)
+# -------------------------------------------------------------
+
+### 1.1 Get All Services
+GET {{baseUrl}}/services
+Accept: application/json
+
+###
+
+### 1.2 Get Service by Slug
+GET {{baseUrl}}/services/home-cleaning
+Accept: application/json
+
+###
+
+### 1.3 Get Service by Invalid ID/Slug (Should return 404)
+GET {{baseUrl}}/services/non-existent-service-123
+Accept: application/json
+
+###
+
+# -------------------------------------------------------------
+# 2. AUTHENTICATION (CUSTOMER)
+# -------------------------------------------------------------
+
+### 2.1 Register New Customer
+# @name customerRegister
+POST {{baseUrl}}/auth/register
+Content-Type: {{contentType}}
+
+{
+  "name": "Jane Doe",
+  "email": "jane@example.com",
+  "phone": "+91 91234 56789",
+  "password": "password123"
+}
+
+###
+
+### 2.2 Register Duplicate Email (Should return 400)
+POST {{baseUrl}}/auth/register
+Content-Type: {{contentType}}
+
+{
+  "name": "Jane Duplicate",
+  "email": "jane@example.com",
+  "phone": "+91 91234 56789",
+  "password": "password123"
+}
+
+###
+
+### 2.3 Login Customer (Seed or Registered Account)
+# @name customerLogin
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "customer@careconnect.com",
+  "password": "password123"
+}
+
+###
+
+### 2.4 Login with Invalid Password (Should return 401)
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "customer@careconnect.com",
+  "password": "wrongpassword"
+}
+
+###
+
+### 2.5 Get Current Authenticated Customer Profile (Uses Cookie)
+GET {{baseUrl}}/auth/me
+Accept: application/json
+
+###
+
+# -------------------------------------------------------------
+# 3. USER PROFILE MANAGEMENT
+# -------------------------------------------------------------
+
+### 3.1 Get Profile
+GET {{baseUrl}}/users/profile
+Accept: application/json
+
+###
+
+### 3.2 Update Profile (Name & Phone)
+PATCH {{baseUrl}}/users/profile
+Content-Type: {{contentType}}
+
+{
+  "name": "Demo Customer Updated",
+  "phone": "+91 99999 77777"
+}
+
+###
+
+### 3.3 Attempt Unauthorized Role Escalation (Should return 400)
+PATCH {{baseUrl}}/users/profile
+Content-Type: {{contentType}}
+
+{
+  "role": "provider"
+}
+
+###
+
+# -------------------------------------------------------------
+# 4. CUSTOMER BOOKINGS WORKFLOW
+# -------------------------------------------------------------
+
+### 4.1 Create Booking (Customer)
+# Note: Replace the 'service' ID with an actual _id retrieved from request 1.1 if not using slug.
+# Home Cleaning belongs to 'Cleaning' category -> automatically assigned to Provider 1
+POST {{baseUrl}}/bookings
+Content-Type: {{contentType}}
+
+{
+  "service": "664fa1e25e8a7d18bc9a0001",
+  "address": "Flat 402, Green Meadows Apt, Madhapur, Hyderabad",
+  "phone": "+91 99999 88888",
+  "date": "2026-10-05",
+  "timeSlot": "09:00 AM - 11:00 AM",
+  "notes": "Please ring the doorbell twice, pet dog in home."
+}
+
+###
+
+### 4.2 Create Booking with Missing Fields (Should return 400)
+POST {{baseUrl}}/bookings
+Content-Type: {{contentType}}
+
+{
+  "address": "Flat 402, Green Meadows Apt",
+  "date": "2026-10-05"
+}
+
+###
+
+### 4.3 View Customer's Bookings
+GET {{baseUrl}}/bookings/my
+Accept: application/json
+
+###
+
+### 4.4 View Booking Details by ID
+# Replace with actual booking ID created in 4.1
+GET {{baseUrl}}/bookings/664fa2505e8a7d18bc9a0055
+Accept: application/json
+
+###
+
+### 4.5 Customer Cancels Booking
+# Replace with actual booking ID
+PATCH {{baseUrl}}/bookings/664fa2505e8a7d18bc9a0055/cancel
+Accept: application/json
+
+###
+
+### 4.6 Attempt to Cancel Already Cancelled Booking (Should return 400)
+PATCH {{baseUrl}}/bookings/664fa2505e8a7d18bc9a0055/cancel
+Accept: application/json
+
+###
+
+# -------------------------------------------------------------
+# 5. PROVIDER WORKFLOW
+# -------------------------------------------------------------
+
+### 5.1 Login as Provider 1 (Cleaning specialist)
+# @name providerLogin
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "provider1@careconnect.com",
+  "password": "password123"
+}
+
+###
+
+### 5.2 Provider Fetches Assigned Bookings
+GET {{baseUrl}}/provider/bookings
+Accept: application/json
+
+###
+
+### 5.3 Provider Updates Booking Status to 'Confirmed'
+# Replace with actual booking ID assigned to Provider 1
+PATCH {{baseUrl}}/provider/bookings/664fa2505e8a7d18bc9a0055/status
+Content-Type: {{contentType}}
+
+{
+  "status": "Confirmed"
+}
+
+###
+
+### 5.4 Provider Updates Booking Status to 'In Progress'
+PATCH {{baseUrl}}/provider/bookings/664fa2505e8a7d18bc9a0055/status
+Content-Type: {{contentType}}
+
+{
+  "status": "In Progress"
+}
+
+###
+
+### 5.5 Provider Updates Booking Status to 'Completed'
+PATCH {{baseUrl}}/provider/bookings/664fa2505e8a7d18bc9a0055/status
+Content-Type: {{contentType}}
+
+{
+  "status": "Completed"
+}
+
+###
+
+### 5.6 Attempt Invalid Status Transition (e.g. Completed -> In Progress, Should return 400)
+PATCH {{baseUrl}}/provider/bookings/664fa2505e8a7d18bc9a0055/status
+Content-Type: {{contentType}}
+
+{
+  "status": "In Progress"
+}
+
+###
+
+# -------------------------------------------------------------
+# 6. ROLE & PERMISSION GUARDS
+# -------------------------------------------------------------
+
+### 6.1 Provider Attempts to Create a Booking (Forbidden - roleMiddleware should return 403)
+POST {{baseUrl}}/bookings
+Content-Type: {{contentType}}
+
+{
+  "service": "664fa1e25e8a7d18bc9a0001",
+  "address": "Street 1",
+  "phone": "+91 99999 88888",
+  "date": "2026-10-05",
+  "timeSlot": "09:00 AM - 11:00 AM"
+}
+
+###
+
+### 6.2 Customer Attempts to Access Provider Bookings Queue (Forbidden - Should return 403)
+# (Run request 2.3 first to restore customer cookie, then execute this)
+GET {{baseUrl}}/provider/bookings
+Accept: application/json
+
+###
+
+# -------------------------------------------------------------
+# 7. LOGOUT & SESSION TERMINATION
+# -------------------------------------------------------------
+
+### 7.1 Logout
+POST {{baseUrl}}/auth/logout
+Accept: application/json
+
+###
+
+### 7.2 Access Protected Route After Logout (Should return 401)
+GET {{baseUrl}}/auth/me
+Accept: application/json
