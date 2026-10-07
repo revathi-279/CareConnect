@@ -1,0 +1,13 @@
+const express = require('express');
+const { registerUser, loginUser, getMe } = require('../controllers/authController');
+const { protect } = require('../middleware/authMiddleware');
+
+const router = express.Router();
+
+router.post('/register', registerUser);
+router.post('/login', loginUser);
+
+// Any route using the protect middleware requires a valid JWT
+router.get('/me', protect, getMe);
+
+module.exports = router;

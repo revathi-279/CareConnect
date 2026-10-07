@@ -1,0 +1,34 @@
+@baseUrl = http://localhost:5000
+
+### 1. Login as Admin
+# @name loginAdmin
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@careconnect.com",
+  "password": "password123"
+}
+### Store Admin Token
+@adminToken = {{loginAdmin.response.body.token}}
+
+### 2. Fetch Platform Analytics
+# Expected: A beautiful, aggregated JSON object showing all the dummy data we've generated over the last 19 phases!
+GET {{baseUrl}}/api/analytics
+Authorization: Bearer {{adminToken}}
+
+### 3. Try to view analytics as a Customer (Error Test)
+# @name loginCustomer
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "john@example.com",
+  "password": "password123"
+}
+###
+@customerToken = {{loginCustomer.response.body.token}}
+
+### Expected: 403 Forbidden (Customers shouldn't see platform financials!)
+GET {{baseUrl}}/api/analytics
+Authorization: Bearer {{customerToken}}

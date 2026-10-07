@@ -1,0 +1,76 @@
+@baseUrl = http://localhost:5000
+
+### 1. Login as John (Customer)
+# @name loginCustomer
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "john@example.com",
+  "password": "password123"
+}
+### Store Customer Token
+@customerToken = {{loginCustomer.response.body.token}}
+
+### 2. Fetch John's Bookings to get the Booking ID
+# @name getBookings
+GET {{baseUrl}}/api/bookings
+Authorization: Bearer {{customerToken}}
+
+### Store the ID
+@bookingId = {{getBookings.response.body.data[0]._id}}
+
+### 3. Customer raises a Dispute!
+POST {{baseUrl}}/api/disputes
+Authorization: Bearer {{customerToken}}
+Content-Type: application/json
+
+{
+  "bookingId": "{{bookingId}}",
+  "reason": "Machine leaking water after repair",
+  "description": "Jane fixed the belt yesterday, but today when I ran a cycle, water poured out of the bottom of the machine. I think a hose was knocked loose during the repair."
+}
+
+### 4. Check that the Booking status changed to "disputed"
+GET {{baseUrl}}/api/bookings
+Authorization: Bearer {{customerToken}}
+
+### 5. Login as Admin
+# @name loginAdmin
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@careconnect.com",
+  "password": "password123"
+}
+### Store Admin Token
+@adminToken = {{loginAdmin.response.body.token}}
+
+### 6. Admin views all open disputes in the platform
+# @name getOpenDisputes
+GET {{baseUrl}}/api/disputes?status=open
+Authorization: Bearer {{adminToken}}
+
+### Store the Dispute ID
+@disputeId = {{getOpenDisputes.response.body.data[0]._id}}
+
+### 7. Admin updates and resolves the dispute
+PATCH {{baseUrl}}/api/disputes/{{disputeId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "status": "resolved",
+  "resolution": "Contacted Jane. She agreed to return tomorrow morning free of charge to re-secure the drainage hose."
+}
+
+### 8. Customer attempts to resolve their own dispute (Authorization Check)
+# Expected: 403 Forbidden
+PATCH {{baseUrl}}/api/disputes/{{disputeId}}
+Authorization: Bearer {{customerToken}}
+Content-Type: application/json
+
+{
+  "status": "resolved"
+}

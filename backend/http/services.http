@@ -1,0 +1,78 @@
+@baseUrl = http://localhost:5000
+
+### 1. Register an Admin Account
+# @name registerAdmin
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "name": "System Admin",
+  "email": "admin@careconnect.com",
+  "password": "password123",
+  "role": "admin"
+}
+
+### 2. Login the Admin
+# @name loginAdmin
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@careconnect.com",
+  "password": "password123"
+}
+
+### Store admin token
+@adminToken = {{loginAdmin.response.body.token}}
+
+### 3. Create a Category (Requires Admin Token)
+# @name createCategory
+POST {{baseUrl}}/api/categories
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Appliance Repair",
+  "description": "Repair and maintenance of household appliances"
+}
+
+### Store the newly created category ID
+@categoryId = {{createCategory.response.body.data._id}}
+
+### 4. Create a Service under that Category (Requires Admin Token)
+POST {{baseUrl}}/api/services
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Washing Machine Repair",
+  "category": "{{categoryId}}",
+  "description": "Diagnosis and repair of front-load or top-load washing machines.",
+  "pricingModel": "fixed",
+  "basePrice": 49.99,
+  "estimatedDuration": 90,
+  "includedTasks": ["Diagnosis", "Basic internal cleaning", "Minor part adjustment"],
+  "excludedTasks": ["Cost of replacement parts", "Complete dismantling"]
+}
+
+### 5. Get All Categories (Public - No Token Needed)
+GET {{baseUrl}}/api/categories
+
+### 6. Get All Services (Public - No Token Needed)
+# Expected: Returns the service, and the "category" field is populated with the category name/desc.
+GET {{baseUrl}}/api/services
+
+### 7. Filter Services by Category (Public)
+GET {{baseUrl}}/api/services?category={{categoryId}}
+
+### 8. Attempt to create Category with Customer Token (Authorization Test)
+# Replace {{customerToken}} with the token you generated in Phase 2 for John Doe.
+# Expected: 403 Forbidden
+# POST {{baseUrl}}/api/categories
+# Authorization: Bearer {{customerToken}}
+# Content-Type: application/json
+
+# {
+#   "name": "Should Fail",
+#   "description": "Customers cannot create categories"
+# }

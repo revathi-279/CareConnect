@@ -1,0 +1,63 @@
+@baseUrl = http://localhost:5000
+
+### 1. Login as Admin
+# @name loginAdmin
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@careconnect.com",
+  "password": "password123"
+}
+### Store Admin Token
+@adminToken = {{loginAdmin.response.body.token}}
+
+### 2. Get All Providers (Including pending ones, we need an ID)
+# (Note: We built /api/providers to only show verified. So we hit the DB directly via a trick, or we just grab Jane's profile ID from Phase 4). 
+# Actually, let's login as Jane to get her Profile ID.
+# @name loginProvider
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "jane@example.com",
+  "password": "password123"
+}
+###
+@providerToken = {{loginProvider.response.body.token}}
+
+### 3. Get Jane's Profile ID
+# @name getProviderProfile
+GET {{baseUrl}}/api/providers/profile/me
+Authorization: Bearer {{providerToken}}
+
+### Store Profile ID
+@providerProfileId = {{getProviderProfile.response.body.data._id}}
+
+### 4. Admin changes Jane's status (This triggers the Audit Log!)
+PATCH {{baseUrl}}/api/providers/{{providerProfileId}}/verify
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "status": "pending"
+}
+
+### 5. Admin changes Jane's status back (Triggers a second log!)
+PATCH {{baseUrl}}/api/providers/{{providerProfileId}}/verify
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "status": "verified"
+}
+
+### 6. Admin views the Audit Logs
+# Expected: You should see the two UPDATE_PROVIDER_STATUS events here!
+GET {{baseUrl}}/api/audit-logs
+Authorization: Bearer {{adminToken}}
+
+### 7. Filter Audit Logs (Test advancedResults)
+# Expected: Only fetch logs where the action is UPDATE_PROVIDER_STATUS
+GET {{baseUrl}}/api/audit-logs?action=UPDATE_PROVIDER_STATUS
+Authorization: Bearer {{adminToken}}

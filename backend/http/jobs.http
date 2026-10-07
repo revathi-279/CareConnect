@@ -1,0 +1,76 @@
+@baseUrl = http://localhost:5000
+
+### 1. Login as Jane (Provider)
+# @name loginProvider
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "jane@example.com",
+  "password": "password123"
+}
+### Store Provider Token
+@providerToken = {{loginProvider.response.body.token}}
+
+### 2. Fetch Jane's Bookings to get the Booking/Job ID
+# @name getProviderBookings
+GET {{baseUrl}}/api/bookings
+Authorization: Bearer {{providerToken}}
+
+### Store the Booking ID (This acts as our Job ID)
+@jobId = {{getProviderBookings.response.body.data[0]._id}}
+
+### 3. State Machine Error Test: Try to jump straight to 'completed'
+# Expected: 400 Bad Request (Invalid transition)
+PATCH {{baseUrl}}/api/jobs/{{jobId}}/status
+Authorization: Bearer {{providerToken}}
+Content-Type: application/json
+
+{
+  "status": "completed",
+  "note": "Finished early!"
+}
+
+### 4. Valid Step 1: On the way
+PATCH {{baseUrl}}/api/jobs/{{jobId}}/status
+Authorization: Bearer {{providerToken}}
+Content-Type: application/json
+
+{
+  "status": "on_the_way",
+  "note": "Stuck in a little traffic, be there in 15 mins."
+}
+
+### 5. Valid Step 2: Arrived
+PATCH {{baseUrl}}/api/jobs/{{jobId}}/status
+Authorization: Bearer {{providerToken}}
+Content-Type: application/json
+
+{
+  "status": "arrived"
+}
+
+### 6. Valid Step 3: In Progress
+PATCH {{baseUrl}}/api/jobs/{{jobId}}/status
+Authorization: Bearer {{providerToken}}
+Content-Type: application/json
+
+{
+  "status": "in_progress",
+  "note": "Starting diagnostics."
+}
+
+### 7. View the Updated Booking/Job as Customer to see the timeline
+# Login as Customer quickly
+# @name loginCustomer
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "john@example.com",
+  "password": "password123"
+}
+
+### View Bookings
+GET {{baseUrl}}/api/bookings
+Authorization: Bearer {{loginCustomer.response.body.token}}

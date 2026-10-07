@@ -1,0 +1,68 @@
+@baseUrl = http://localhost:5000
+
+### 1. Login as Jane (Provider)
+# @name loginProvider
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "jane@example.com",
+  "password": "password123"
+}
+### Store Provider Token
+@providerToken = {{loginProvider.response.body.token}}
+
+### 2. Fetch Jane's Bookings to get the Booking ID
+# @name getProviderBookings
+GET {{baseUrl}}/api/bookings
+Authorization: Bearer {{providerToken}}
+
+### Store the Booking ID
+@bookingId = {{getProviderBookings.response.body.data[0]._id}}
+
+### 3. Provider requests Additional Work
+POST {{baseUrl}}/api/additional-work
+Authorization: Bearer {{providerToken}}
+Content-Type: application/json
+
+{
+  "bookingId": "{{bookingId}}",
+  "description": "Replace main drive belt",
+  "reason": "During diagnostics, I found the drive belt is completely snapped, which is causing the drum to shake violently.",
+  "additionalPrice": 35.50,
+  "estimatedExtraTime": 30
+}
+
+### 4. Login as John (Customer)
+# @name loginCustomer
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "john@example.com",
+  "password": "password123"
+}
+### Store Customer Token
+@customerToken = {{loginCustomer.response.body.token}}
+
+### 5. Customer views additional work requests for their booking
+# @name getExtraWork
+GET {{baseUrl}}/api/additional-work/{{bookingId}}
+Authorization: Bearer {{customerToken}}
+
+### Store the Additional Work ID
+@extraWorkId = {{getExtraWork.response.body.data[0]._id}}
+
+### 6. Customer Approves the Additional Work
+PATCH {{baseUrl}}/api/additional-work/{{extraWorkId}}/respond
+Authorization: Bearer {{customerToken}}
+Content-Type: application/json
+
+{
+  "status": "approved"
+}
+
+### 7. Verify the Booking was updated!
+# Expected: `additionalWorkAmount` should now be 35.50, and `statusHistory` should have a new note.
+GET {{baseUrl}}/api/bookings
+Authorization: Bearer {{customerToken}}

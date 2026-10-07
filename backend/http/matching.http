@@ -1,0 +1,73 @@
+@baseUrl = http://localhost:5000
+
+### 1. Get Categories (Public) to find the ID for "Appliance Repair"
+# @name getCategories
+GET {{baseUrl}}/api/categories
+
+### Store the Category ID
+@categoryId = {{getCategories.response.body.data[0]._id}}
+
+### 2. Login as Jane the Provider
+# @name loginProvider
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "jane@example.com",
+  "password": "password123"
+}
+### Store Jane's Token
+@providerToken = {{loginProvider.response.body.token}}
+
+### 3. Update Jane's Profile to include the Category
+POST {{baseUrl}}/api/providers/profile
+Authorization: Bearer {{providerToken}}
+Content-Type: application/json
+
+{
+  "bio": "Expert plumber and appliance repair specialist with 5 years of experience.",
+  "experienceYears": 5,
+  "serviceAreas": ["Downtown", "Northside", "West End"],
+  "categories": ["{{categoryId}}"]
+}
+
+### 4. Jane adds availability for the date John requested (2026-10-02)
+POST {{baseUrl}}/api/availability
+Authorization: Bearer {{providerToken}}
+Content-Type: application/json
+
+{
+  "date": "2026-10-02",
+  "startTime": "13:00",
+  "endTime": "17:00"
+}
+
+### 5. Login as John the Customer
+# @name loginCustomer
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "john@example.com",
+  "password": "password123"
+}
+### Store John's Token
+@customerToken = {{loginCustomer.response.body.token}}
+
+### 6. Get John's Requests to find the ID of his classified request
+# @name getCustomerRequests
+GET {{baseUrl}}/api/requests/me
+Authorization: Bearer {{customerToken}}
+
+### Store Request ID
+@requestId = {{getCustomerRequests.response.body.data[0]._id}}
+
+### 7. RUN THE MATCH ENGINE! Find providers for John's request
+# Expected: Jane's profile should appear in the array!
+GET {{baseUrl}}/api/requests/{{requestId}}/matches
+Authorization: Bearer {{customerToken}}
+
+### 8. Test Authorization Guard (Jane tries to view John's matches)
+# Expected: 403 Forbidden
+GET {{baseUrl}}/api/requests/{{requestId}}/matches
+Authorization: Bearer {{providerToken}}

@@ -1,0 +1,61 @@
+@baseUrl = http://localhost:5000
+
+### 1. Login as the Customer (John Doe from Phase 2)
+# @name loginCustomer
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "john@example.com",
+  "password": "password123"
+}
+
+### Store customer token
+@customerToken = {{loginCustomer.response.body.token}}
+
+### 2. Customer creates a new Service Request
+# The description is raw text. Phase 7's AI will parse this!
+POST {{baseUrl}}/api/requests
+Authorization: Bearer {{customerToken}}
+Content-Type: application/json
+
+{
+  "description": "My washing machine is making a loud banging noise on the spin cycle and shaking violently.",
+  "address": "123 Main St, Apt 4B",
+  "preferredDate": "2026-10-02",
+  "preferredTime": "Afternoon",
+  "urgency": "high"
+}
+
+### 3. Customer views their own requests
+GET {{baseUrl}}/api/requests/me
+Authorization: Bearer {{customerToken}}
+
+### 4. Login as Admin
+# @name loginAdmin
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@careconnect.com",
+  "password": "password123"
+}
+
+### Store admin token
+@adminToken = {{loginAdmin.response.body.token}}
+
+### 5. Admin views all pending requests in the system
+GET {{baseUrl}}/api/requests?status=pending
+Authorization: Bearer {{adminToken}}
+
+### 6. Provider attempts to create a request (Authorization Check)
+# Replace {{providerToken}} with Jane's token from Phase 4
+# # Expected: 403 Forbidden
+# POST {{baseUrl}}/api/requests
+# Authorization: Bearer {{providerToken}}
+# Content-Type: application/json
+
+# {
+#   "description": "Providers shouldn't be able to book services through this route.",
+#   "address": "Nowhere"
+# }

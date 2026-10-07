@@ -1,0 +1,74 @@
+@baseUrl = http://localhost:5000
+
+### 1. Login as the Provider (Created in Phase 2)
+# @name loginProvider
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "jane@example.com",
+  "password": "password123"
+}
+
+### Store provider token
+@providerToken = {{loginProvider.response.body.token}}
+
+### 2. Provider Creates/Updates their Profile
+POST {{baseUrl}}/api/providers/profile
+Authorization: Bearer {{providerToken}}
+Content-Type: application/json
+
+{
+  "bio": "Expert plumber and appliance repair specialist with 5 years of experience.",
+  "experienceYears": 5,
+  "serviceAreas": ["Downtown", "Northside", "West End"]
+}
+
+### 3. Provider views their own profile
+# @name getProviderProfile
+GET {{baseUrl}}/api/providers/profile/me
+Authorization: Bearer {{providerToken}}
+
+### Store the Profile ID (Not User ID) for admin verification
+@providerProfileId = {{getProviderProfile.response.body.data._id}}
+
+### 4. Customer tries to view Providers (Public)
+# Expected Result: Empty array []. The provider is still "pending".
+GET {{baseUrl}}/api/providers
+
+### 5. Login as Admin (Created in Phase 3)
+# @name loginAdmin
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@careconnect.com",
+  "password": "password123"
+}
+
+### Store admin token
+@adminToken = {{loginAdmin.response.body.token}}
+
+### 6. Admin Verifies the Provider
+PATCH {{baseUrl}}/api/providers/{{providerProfileId}}/verify
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "status": "verified"
+}
+
+### 7. Customer tries to view Providers again (Public)
+# Expected Result: The array now contains Jane's profile!
+GET {{baseUrl}}/api/providers
+
+### 8. Customer tries to update a provider profile (Authorization check)
+# Replace {{customerToken}} with John Doe's token from phase 2
+# Expected Result: 403 Forbidden
+# POST {{baseUrl}}/api/providers/profile
+# Authorization: Bearer {{customerToken}}
+# Content-Type: application/json
+
+# {
+#   "bio": "I shouldn't be able to do this"
+# }

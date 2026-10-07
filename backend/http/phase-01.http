@@ -1,0 +1,24 @@
+@baseUrl = http://localhost:5000
+
+### 1. Health Check (Happy Path)
+# Expected: 200 OK with success message and timestamp
+GET {{baseUrl}}/api/health
+Content-Type: application/json
+
+###
+
+### 2. 404 Route Not Found
+# Expected: 404 Not Found with custom JSON error message
+GET {{baseUrl}}/api/this-route-does-not-exist
+Content-Type: application/json
+
+###
+
+### 3. POST to a GET-only route
+# Expected: 404 Not Found (since POST /api/health isn't defined)
+POST {{baseUrl}}/api/health
+Content-Type: application/json
+
+{
+    "test": "data"
+}

@@ -1,0 +1,66 @@
+@baseUrl = http://localhost:5000
+
+### 1. Login as Jane (Provider)
+# @name loginProvider
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "jane@example.com",
+  "password": "password123"
+}
+### Store Provider Token
+@providerToken = {{loginProvider.response.body.token}}
+
+### 2. Fetch Jane's Bookings to get the Booking ID
+# @name getProviderBookings
+GET {{baseUrl}}/api/bookings
+Authorization: Bearer {{providerToken}}
+
+### Store the Booking ID
+@bookingId = {{getProviderBookings.response.body.data[0]._id}}
+
+### 3. Provider adds "Before" Evidence
+POST {{baseUrl}}/api/evidence
+Authorization: Bearer {{providerToken}}
+Content-Type: application/json
+
+{
+  "bookingId": "{{bookingId}}",
+  "imageUrl": "https://example.com/images/broken-washer-before.jpg",
+  "type": "before",
+  "description": "Inner drum is loose, scratching against the outer casing."
+}
+
+### 4. Provider adds "During" Evidence
+POST {{baseUrl}}/api/evidence
+Authorization: Bearer {{providerToken}}
+Content-Type: application/json
+
+{
+  "bookingId": "{{bookingId}}",
+  "imageUrl": "https://example.com/images/broken-washer-during.jpg",
+  "type": "during",
+  "description": "Shock absorbers removed. They are completely worn out."
+}
+
+### 5. View all evidence for this booking as Provider
+GET {{baseUrl}}/api/evidence/{{bookingId}}
+Authorization: Bearer {{providerToken}}
+
+### 6. Login as John (Customer)
+# @name loginCustomer
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "john@example.com",
+  "password": "password123"
+}
+### Store Customer Token
+@customerToken = {{loginCustomer.response.body.token}}
+
+### 7. Customer views the evidence for their booking
+# Expected: Success, showing the 2 images Jane uploaded
+GET {{baseUrl}}/api/evidence/{{bookingId}}
+Authorization: Bearer {{customerToken}}

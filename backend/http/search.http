@@ -1,0 +1,28 @@
+@baseUrl = http://localhost:5000
+
+### 1. Get ALL Services (Standard Pagination applied automatically)
+# Expected: Returns data with a "pagination" object and "total" count
+GET {{baseUrl}}/api/services
+
+### 2. Search Services by Keyword
+# Expected: Finds "Washing Machine Repair" because "washing" matches the regex
+GET {{baseUrl}}/api/services?search=washing
+
+### 3. Filter Services by Price (Less Than or Equal to $50)
+# Notice the syntax: price[lte]=50
+GET {{baseUrl}}/api/services?price[lte]=50
+
+### 4. Sort Services by Price (Highest First)
+GET {{baseUrl}}/api/services?sort=-basePrice
+
+### 5. Pagination Test: Limit to 1 result per page
+# Expected: count is 1, and pagination.next shows page 2 (if you have multiple services)
+GET {{baseUrl}}/api/services?limit=1&page=1
+
+### 6. Select only specific fields
+# Expected: Returns ONLY the name and basePrice, stripping out descriptions and arrays
+GET {{baseUrl}}/api/services?select=name,basePrice
+
+### 7. Get Providers sorted by Rating (Highest First)
+# (Assuming Jane got that 5-star review in Phase 15!)
+GET {{baseUrl}}/api/providers?sort=-rating

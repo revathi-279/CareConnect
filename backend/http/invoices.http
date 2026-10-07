@@ -1,0 +1,66 @@
+@baseUrl = http://localhost:5000
+
+### 1. Login as Jane (Provider)
+# @name loginProvider
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "jane@example.com",
+  "password": "password123"
+}
+### Store Provider Token
+@providerToken = {{loginProvider.response.body.token}}
+
+### 2. Fetch Jane's Bookings to get the active Booking ID
+# @name getProviderBookings
+GET {{baseUrl}}/api/bookings
+Authorization: Bearer {{providerToken}}
+
+### Store the Booking ID
+@bookingId = {{getProviderBookings.response.body.data[0]._id}}
+
+### 3. Generate the Invoice (Also marks Booking as 'completed')
+# Expected: Calculates $85 base + $35.50 additional work = $120.50
+POST {{baseUrl}}/api/invoices
+Authorization: Bearer {{providerToken}}
+Content-Type: application/json
+
+{
+  "bookingId": "{{bookingId}}"
+}
+
+### 4. Attempt to generate a second invoice (Error Test)
+# Expected: 400 Bad Request (Duplicate invoice constraint)
+POST {{baseUrl}}/api/invoices
+Authorization: Bearer {{providerToken}}
+Content-Type: application/json
+
+{
+  "bookingId": "{{bookingId}}"
+}
+
+### 5. Login as John (Customer)
+# @name loginCustomer
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "john@example.com",
+  "password": "password123"
+}
+### Store Customer Token
+@customerToken = {{loginCustomer.response.body.token}}
+
+### 6. View Invoices as Customer
+# @name getInvoices
+GET {{baseUrl}}/api/invoices
+Authorization: Bearer {{customerToken}}
+
+### Store Invoice ID
+@invoiceId = {{getInvoices.response.body.data[0]._id}}
+
+### 7. Customer Pays the Invoice
+PATCH {{baseUrl}}/api/invoices/{{invoiceId}}/pay
+Authorization: Bearer {{customerToken}}
+Content-Type: application/json

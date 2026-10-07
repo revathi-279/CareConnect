@@ -1,0 +1,52 @@
+@baseUrl = http://localhost:5000
+
+### 1. Register a new Customer
+# @name registerCustomer
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "name": "John Doe",
+  "email": "john@example.com",
+  "password": "password123",
+  "role": "customer"
+}
+
+### 2. Login the Customer
+# @name loginCustomer
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "john@example.com",
+  "password": "password123"
+}
+
+### Store the token from the login response into a variable automatically
+@authToken = {{loginCustomer.response.body.token}}
+
+### 3. Get Current User Profile (Protected Route)
+# Expected: Returns user profile. Fails if token is missing/invalid.
+GET {{baseUrl}}/api/auth/me
+Authorization: Bearer {{authToken}}
+
+### 4. Register a Provider (for testing roles later)
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "name": "Jane the Plumber",
+  "email": "jane@example.com",
+  "password": "password123",
+  "role": "provider"
+}
+
+### 5. Test Missing Email/Password (Error Handling)
+# Expected: 400 Bad Request
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "john@example.com"
+}
+

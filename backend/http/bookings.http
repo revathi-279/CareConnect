@@ -1,0 +1,74 @@
+@baseUrl = http://localhost:5000
+
+### 1. Login as John (Customer)
+# @name loginCustomer
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "john@example.com",
+  "password": "password123"
+}
+### Store Customer Token
+@customerToken = {{loginCustomer.response.body.token}}
+
+### 2. Find John's Request (To get the ID)
+# @name getRequests
+GET {{baseUrl}}/api/requests/me
+Authorization: Bearer {{customerToken}}
+
+### Store Request ID
+@requestId = {{getRequests.response.body.data[0]._id}}
+
+### 3. Find the Accepted Quote for this Request
+# @name getQuotes
+GET {{baseUrl}}/api/quotes?requestId={{requestId}}
+Authorization: Bearer {{customerToken}}
+
+### Store Quote ID
+@quoteId = {{getQuotes.response.body.data[0]._id}}
+
+### 4. Create the Booking!
+POST {{baseUrl}}/api/bookings
+Authorization: Bearer {{customerToken}}
+Content-Type: application/json
+
+{
+  "quoteId": "{{quoteId}}",
+  "date": "2026-10-02",
+  "startTime": "14:00",
+  "endTime": "16:00"
+}
+
+### 5. Attempt Double-Booking (Error Test)
+# Expected: 409 Conflict (Provider is already booked on this date/time)
+POST {{baseUrl}}/api/bookings
+Authorization: Bearer {{customerToken}}
+Content-Type: application/json
+
+{
+  "quoteId": "{{quoteId}}",
+  "date": "2026-10-02",
+  "startTime": "15:00",
+  "endTime": "17:00"
+}
+
+### 6. View all Bookings as Customer
+GET {{baseUrl}}/api/bookings
+Authorization: Bearer {{customerToken}}
+
+### 7. Login as Jane (Provider) to view her bookings
+# @name loginProvider
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "jane@example.com",
+  "password": "password123"
+}
+### Store Provider Token
+@providerToken = {{loginProvider.response.body.token}}
+
+### 8. View Bookings as Provider
+GET {{baseUrl}}/api/bookings
+Authorization: Bearer {{providerToken}}

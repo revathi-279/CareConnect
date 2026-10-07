@@ -1,0 +1,55 @@
+@baseUrl = http://localhost:5000
+
+### 1. Login as Admin
+# @name loginAdmin
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@careconnect.com",
+  "password": "password123"
+}
+### Store Admin Token
+@adminToken = {{loginAdmin.response.body.token}}
+
+### 2. Admin Broadcasts a Notification to John (Customer)
+POST {{baseUrl}}/api/notifications/broadcast
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "email": "john@example.com",
+  "title": "Welcome to CareConnect!",
+  "message": "Thank you for joining our platform. Need a repair? Book a provider today!"
+}
+
+### 3. Login as John (Customer)
+# @name loginCustomer
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "john@example.com",
+  "password": "password123"
+}
+### Store Customer Token
+@customerToken = {{loginCustomer.response.body.token}}
+
+### 4. John Views his Notifications
+# Expected: unreadCount should be at least 1, and isRead should be false
+# @name getNotifications
+GET {{baseUrl}}/api/notifications
+Authorization: Bearer {{customerToken}}
+
+### Store Notification ID
+@notificationId = {{getNotifications.response.body.data[0]._id}}
+
+### 5. John marks the notification as Read
+PATCH {{baseUrl}}/api/notifications/{{notificationId}}/read
+Authorization: Bearer {{customerToken}}
+Content-Type: application/json
+
+### 6. John views his Notifications again
+# Expected: unreadCount should decrease, and isRead should be true!
+GET {{baseUrl}}/api/notifications
+Authorization: Bearer {{customerToken}}

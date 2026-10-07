@@ -1,0 +1,35 @@
+@baseUrl = http://localhost:5000
+
+### 1. Login as Admin
+# @name loginAdmin
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@careconnect.com",
+  "password": "password123"
+}
+
+### Store admin token
+@adminToken = {{loginAdmin.response.body.token}}
+
+### 2. Fetch all pending requests (To grab an ID)
+# @name getPendingRequests
+GET {{baseUrl}}/api/requests?status=pending
+Authorization: Bearer {{adminToken}}
+
+### Store the ID of the first pending request
+# (This assumes John Doe's request from Phase 6 is the first one in the array)
+@requestId = {{getPendingRequests.response.body.data[0]._id}}
+
+### 3. Trigger AI Classification
+# Expected: Status changes to 'classified', service and category are populated!
+PATCH {{baseUrl}}/api/requests/{{requestId}}/classify
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+### 4. Attempt to classify again (Error Test)
+# Expected: 400 Bad Request ("Cannot classify a request with status: classified")
+PATCH {{baseUrl}}/api/requests/{{requestId}}/classify
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json

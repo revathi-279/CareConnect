@@ -1,0 +1,82 @@
+@baseUrl = http://localhost:5000
+
+### 1. Login as John (Customer)
+# @name loginCustomer
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "john@example.com",
+  "password": "password123"
+}
+### Store Customer Token
+@customerToken = {{loginCustomer.response.body.token}}
+
+### 2. Get John's Requests to find the Request ID
+# @name getCustomerRequests
+GET {{baseUrl}}/api/requests/me
+Authorization: Bearer {{customerToken}}
+
+### Store Request ID
+@requestId = {{getCustomerRequests.response.body.data[0]._id}}
+
+### 3. Login as Jane (Provider)
+# @name loginProvider
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "jane@example.com",
+  "password": "password123"
+}
+### Store Provider Token
+@providerToken = {{loginProvider.response.body.token}}
+
+### 4. Jane Submits a Quote for John's Request
+POST {{baseUrl}}/api/quotes
+Authorization: Bearer {{providerToken}}
+Content-Type: application/json
+
+{
+  "requestId": "{{requestId}}",
+  "price": 85.00,
+  "estimatedDuration": 120,
+  "message": "I can fix your washing machine shaking issue. Likely needs new shock absorbers.",
+  "validUntil": "2026-10-10T00:00:00.000Z"
+}
+
+### 5. Jane tries to submit a second quote for the SAME request (Error test)
+# Expected: 400 Bad Request (Duplicate quote)
+POST {{baseUrl}}/api/quotes
+Authorization: Bearer {{providerToken}}
+Content-Type: application/json
+
+{
+  "requestId": "{{requestId}}",
+  "price": 75.00,
+  "estimatedDuration": 90,
+  "message": "Actually, I can do it cheaper.",
+  "validUntil": "2026-10-10T00:00:00.000Z"
+}
+
+### 6. John (Customer) views the quotes for his request
+# @name getQuotesForRequest
+GET {{baseUrl}}/api/quotes?requestId={{requestId}}
+Authorization: Bearer {{customerToken}}
+
+### Store Quote ID
+@quoteId = {{getQuotesForRequest.response.body.data[0]._id}}
+
+### 7. John Accepts Jane's Quote
+PATCH {{baseUrl}}/api/quotes/{{quoteId}}/status
+Authorization: Bearer {{customerToken}}
+Content-Type: application/json
+
+{
+  "status": "accepted"
+}
+
+### 8. Verify Request Status changed to "quoted"
+# Expected: status should now be "quoted" because a quote was submitted
+GET {{baseUrl}}/api/requests/me
+Authorization: Bearer {{customerToken}}

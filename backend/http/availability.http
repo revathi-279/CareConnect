@@ -1,0 +1,76 @@
+@baseUrl = http://localhost:5000
+
+### 1. Login as the Provider (Jane)
+# @name loginProvider
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "jane@example.com",
+  "password": "password123"
+}
+
+### Store token and Provider User ID
+@providerToken = {{loginProvider.response.body.token}}
+@providerUserId = {{loginProvider.response.body._id}}
+
+### 2. Add Morning Availability (Happy Path)
+POST {{baseUrl}}/api/availability
+Authorization: Bearer {{providerToken}}
+Content-Type: application/json
+
+{
+  "date": "2026-10-01",
+  "startTime": "09:00",
+  "endTime": "13:00"
+}
+
+### 3. Add Afternoon Availability (Happy Path - Does not overlap)
+# @name createAfternoonBlock
+POST {{baseUrl}}/api/availability
+Authorization: Bearer {{providerToken}}
+Content-Type: application/json
+
+{
+  "date": "2026-10-01",
+  "startTime": "14:00",
+  "endTime": "17:00"
+}
+
+### Store ID of the afternoon block to test delete later
+@blockId = {{createAfternoonBlock.response.body.data._id}}
+
+### 4. Attempt to add OVERLAPPING Availability (Error Testing)
+# Expected Result: 409 Conflict (Because 12:00-15:00 overlaps with both blocks above)
+POST {{baseUrl}}/api/availability
+Authorization: Bearer {{providerToken}}
+Content-Type: application/json
+
+{
+  "date": "2026-10-01",
+  "startTime": "12:00",
+  "endTime": "15:00"
+}
+
+### 5. Attempt Invalid Time Logic (Error Testing)
+# Expected Result: 400 Bad Request (Start time is after end time)
+POST {{baseUrl}}/api/availability
+Authorization: Bearer {{providerToken}}
+Content-Type: application/json
+
+{
+  "date": "2026-10-02",
+  "startTime": "18:00",
+  "endTime": "10:00"
+}
+
+### 6. Provider views their own schedule
+GET {{baseUrl}}/api/availability/me?date=2026-10-01
+Authorization: Bearer {{providerToken}}
+
+### 7. Customer views Provider's schedule (Public)
+GET {{baseUrl}}/api/availability/{{providerUserId}}?date=2026-10-01
+
+### 8. Provider deletes the afternoon block
+DELETE {{baseUrl}}/api/availability/{{blockId}}
+Authorization: Bearer {{providerToken}}
