@@ -6,7 +6,8 @@ import api from '../../services/api';
 // Point to your backend URL
 // const socket = io('http://localhost:5000'); 
 
-const socket = io('https://your-backend-app-name.onrender.com');
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
+const socket = io(SOCKET_URL);
 
 const LiveChat = ({ bookingId, currentUser, initialChatHistory = [] }) => {
   const [messages, setMessages] = useState(initialChatHistory);
